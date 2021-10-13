@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[176]:
+# In[9]:
 
 
 import numpy as np
@@ -27,14 +27,14 @@ from sklearn.decomposition import PCA
 from sklearn.cluster import DBSCAN
 
 
-# In[177]:
+# In[10]:
 
 
-data = pd.read_csv('~/Desktop/CLEAN/CV_News.csv')
+data = pd.read_csv('~/Desktop/CLEAN/cluster/CV_News.csv')
 data.head(n = 5)
 
 
-# In[179]:
+# In[11]:
 
 
 def tokenize(string):
@@ -42,7 +42,7 @@ def tokenize(string):
     return tokens
 
 
-# In[180]:
+# In[12]:
 
 
 vectorizer = TfidfVectorizer(input='content',   ## 'content'
@@ -51,7 +51,7 @@ vectorizer = TfidfVectorizer(input='content',   ## 'content'
                         )
 
 
-# In[181]:
+# In[13]:
 
 
 X = vectorizer.fit_transform(data['LABEL'])
@@ -61,13 +61,13 @@ MyColumnNames=vectorizer.get_feature_names()
 My_DF.columns = MyColumnNames
 
 
-# In[182]:
+# In[14]:
 
 
 My_DF.columns[0:5]
 
 
-# In[183]:
+# In[15]:
 
 
 labels = data['LABEL']
@@ -80,7 +80,7 @@ df = data.drop("LABEL", axis=1)
 
 
 
-# In[184]:
+# In[16]:
 
 
 ##         Look at best values for k
@@ -105,7 +105,7 @@ plt.title('Elbow method for optimal k Choice')
 plt.show()
 
 
-# In[185]:
+# In[17]:
 
 
 ####
@@ -137,7 +137,7 @@ ax2.set_title("Calinski_Harabasz_Score")
 ax2.set_xlabel("k values")
 
 
-# In[186]:
+# In[18]:
 
 
 df_normalized=(df - df.mean()) / df.std()
@@ -145,7 +145,7 @@ df_normalized=(df - df.mean()) / df.std()
 NumCols=df_normalized.shape[1]
 
 
-# In[187]:
+# In[19]:
 
 
 ## PCA
@@ -172,20 +172,19 @@ print(Comps)
 
 
 
-# In[188]:
+# In[62]:
 
 
 ########################
 ## Look at 2D PCA clusters
 ############################################
-
+Comps['label'] = label
 plt.figure(figsize=(35,20))
 plt.scatter(Comps.iloc[:,0], Comps.iloc[:,1], s=100, color="pink")
 
 plt.xlabel("PC 1")
 plt.ylabel("PC 2")
 plt.title("Scatter Plot Clusters PC 1 and 2",fontsize=20)
-
 plt.show()
 
 
@@ -195,7 +194,7 @@ plt.show()
 
 
 
-# In[189]:
+# In[21]:
 
 
 ##         DBSCAN
@@ -208,7 +207,7 @@ MyDBSCAN.fit_predict(Comps)
 print(MyDBSCAN.labels_)
 
 
-# In[190]:
+# In[56]:
 
 
 Comps['label'] = MyDBSCAN.labels_
@@ -219,41 +218,58 @@ ax.set_title("DBSCAN Results")
 plt.show()
 
 
-# In[ ]:
+# In[84]:
 
 
+labels = MyDBSCAN.labels_
+n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
+n_noise_ = list(labels).count(-1)
+core_samples_mask = np.zeros_like(MyDBSCAN.labels_, dtype=bool)
+core_samples_mask[MyDBSCAN.core_sample_indices_] = True
+print('Estimated number of clusters: %d' % n_clusters_)
+print('Estimated number of noise points: %d' % n_noise_)
 
 
-
-# In[197]:
+# In[80]:
 
 
 # Remove previously assigned label
 Comps = Comps.iloc[:,0:2]
 # Comps
-for k in range(2,10):
-    kmeans = sklearn.cluster.KMeans(n_clusters=k) 
-    kmeans.fit(Comps)
+k = 5
+kmeans = sklearn.cluster.KMeans(n_clusters=k) 
+kmeans.fit(Comps)
 # Get cluster assignment labels
-    labels = kmeans.labels_
-    #print(labels)
-    prediction_kmeans = kmeans.predict(Comps)
+labels1 = kmeans.labels_
+    #print(labels1)
+prediction_kmeans = kmeans.predict(Comps)
     #print(prediction_kmeans2)
 # Format results as a DataFrame
-    Myresults = pd.DataFrame([Comps.index,labels]).T
-    #print(Myresults2)
+Myresults = pd.DataFrame([Comps.index,labels1]).T
+    #print(Myresults)
 
 # plot cluster results for k=4
-    Comps['label'] = labels1
-    #print(labels2)
-    sns.lmplot(data=Comps, x='PC0', y='PC1',hue='label'
+Comps['label'] = labels1
+#print(labels)
+
+
+# In[81]:
+
+
+#Comps['label'] = label
+
+
+# In[82]:
+
+
+sns.lmplot(data=Comps, x='PC0', y='PC1',hue = 'label'
             ,fit_reg=False, legend=True, legend_out=True)
-    ax = plt.gca()
-    ax.set_title("K-means Results When k=%d"%(k))
-    plt.show()
+ax = plt.gca()
+ax.set_title("K-means Results When k=%d"%(k))
+plt.show()
 
 
-# In[193]:
+# In[83]:
 
 
 ## Hierarchical
@@ -284,6 +300,13 @@ dendro = hc.dendrogram((hc.linkage(Comps, method ='ward')))
 
 
 # In[ ]:
+
+
+
+
+
+# In[ ]:
+
 
 
 
