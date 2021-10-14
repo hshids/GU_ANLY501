@@ -25,6 +25,8 @@ import scipy.cluster.hierarchy as hc
 import re
 from sklearn.decomposition import PCA
 from sklearn.cluster import DBSCAN
+import plotly.io as pio
+import plotly.express as px
 
 
 # In[10]:
@@ -287,19 +289,96 @@ plt.title('Hierarchical Clustering')
 dendro = hc.dendrogram((hc.linkage(Comps, method ='ward')))
 
 
-# In[ ]:
+################ 3D PLOT
+# 3D PCA Clusters
+label = data.iloc[0,:]
+#pio.renderers.default = 'svg'
+pio.renderers.default = 'browser' # show the interactive plot in browser
+fig = px.scatter_3d(Comps, x='PC0', y='PC1', z='PC2',
+                    color=label,
+                    title="Scatter Plot Clusters PC 0, 1 and 2")
+fig.show()
+
+## K-means clustering
+
+kmeans_object_Count1 = sklearn.cluster.KMeans(n_clusters=2)
+kmeans_object_Count1.fit(Comps)
+# Get cluster assignment labels
+labels1 = kmeans_object_Count1.labels_
+# print(labels1)
+prediction_kmeans1 = kmeans_object_Count1.predict(Comps)
+print(prediction_kmeans1)
+
+# plot cluster results for k=2
+fig = px.scatter_3d(Comps, x='PC0', y='PC1', z='PC2',
+                    color=labels1,
+                    title="K-means Results 3D When k=2")
+fig.show()
+
+kmeans_object_Count2 = sklearn.cluster.KMeans(n_clusters=3) 
+kmeans_object_Count2.fit(Comps)
+# Get cluster assignment labels
+labels2 = kmeans_object_Count2.labels_
+# print(labels2)
+prediction_kmeans2 = kmeans_object_Count2.predict(Comps)
+print(prediction_kmeans2)
+
+# plot cluster results for k=3
+fig = px.scatter_3d(Comps, x='PC0', y='PC1', z='PC2',
+                    color=labels2,
+                    title="K-means Results 3D When k=3")
+fig.show()
+
+kmeans_object_Count3 = sklearn.cluster.KMeans(n_clusters=4) 
+kmeans_object_Count3.fit(Comps)
+# Get cluster assignment labels
+labels3 = kmeans_object_Count3.labels_
+# print(labels2)
+prediction_kmeans3 = kmeans_object_Count3.predict(Comps)
+print(prediction_kmeans3)
+
+# plot cluster results for k=4
+fig = px.scatter_3d(Comps, x='PC0', y='PC1', z='PC2',
+                    color=labels3,
+                    title="K-means Results 3D When k=4")
+fig.show()
+
+kmeans_object_Count4 = sklearn.cluster.KMeans(n_clusters=5) 
+kmeans_object_Count4.fit(Comps)
+# Get cluster assignment labels
+labels3 = kmeans_object_Count4.labels_
+# print(labels2)
+prediction_kmeans4 = kmeans_object_Count4.predict(Comps)
+print(prediction_kmeans4)
+
+# plot cluster results for k=5
+fig = px.scatter_3d(Comps, x='PC0', y='PC1', z='PC2',
+                    color=labels4,
+                    title="K-means Results 3D When k=5")
+fig.show()
+
+
+## DBSCAN
+MyDBSCAN = DBSCAN(eps=0.01, min_samples=2)
+## eps:
+    ## The maximum distance between two samples for 
+    ##one to be considered as in the neighborhood of the other.
+MyDBSCAN.fit_predict(Comps)
+DB_labels = MyDBSCAN.labels_
+print(DB_labels)
+
+fig = px.scatter_3d(Comps, x='PC0', y='PC1', z='PC2',
+                    color=DB_labels,
+                    title="DBSCAN Results 3D")
+fig.show()
 
 
 
 
 
-# In[ ]:
 
 
 
-
-
-# In[ ]:
 
 
 
