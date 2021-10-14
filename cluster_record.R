@@ -34,6 +34,8 @@ head(df_num)
 (dE <- dist(df_num, method = "euclidean"))
 (dM <- dist(df_num, method = "manhattan"))
 (dMp2 <- dist(df_num, method = "minkowski", p=2))
+require(proxy) # for method cosine
+(dcos <- dist(df_num, method = "cosine"))
 # Hierarchical clustering using Complete Linkage
 (hc_C <- hclust(dM, method = "complete" ))
 plot(hc_C)
@@ -43,10 +45,13 @@ hc_D2 <- hclust(dE, method = "ward.D2" )
 plot(hc_D2)
 hc_Dm <- hclust(dM, method = "ward.D" )
 plot(hc_Dm)
+
 ##heat map
 heatmap(as.matrix(dE), cexRow = 1, cexCol = 1)
 heatmap(as.matrix(dM), cexRow = 1, cexCol = 1)
 heatmap(as.matrix(dMp2), cexRow = 1, cexCol = 1)
+hc_cos <- hclust(dcos, method = "ward.D" )
+plot(hc_cos)
 ########## Euclidean k MEANS
 km_cluster1 <- kmeans(na.omit(df_num), 2)
 km_cluster1$centers
