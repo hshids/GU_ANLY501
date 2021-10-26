@@ -1,0 +1,281 @@
+---
+title: "ARM"
+author: "Hanjing Shi"
+date: "10/24/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(networkD3)
+library(arules)
+library(jsonlite)
+library(streamR)
+library(rjson)
+library(tokenizers)
+library(tidyverse)
+library(plyr)
+library(dplyr)
+library(ggplot2)
+library(syuzhet)
+library(stringr)
+library(arulesViz)
+library(igraph)
+library(httpuv)
+library(openssl)
+library(tidytext)
+library(igraph)
+library(visNetwork)
+library(networkD3)
+library(magrittr)
+```
+
+
+```{r cars}
+setwd("/Users/hanjingshi/Desktop/GGT/arm")
+
+## Read the transactions data into a dataframe
+## Clean the data
+TweetDF <- read.csv("TweetResults.csv", 
+                    header = FALSE, sep = ",")
+
+## Convert all columns to char 
+TweetDF<-TweetDF %>% mutate_all(as.character)
+(str(TweetDF))
+
+```
+```{r}
+# We can now remove certain words
+TweetDF[TweetDF == "t.co"] <- ""
+TweetDF[TweetDF == "rt"] <- ""
+TweetDF[TweetDF == "http"] <- ""
+TweetDF[TweetDF == "https"] <- ""
+
+## Check it so far....
+TweetDF
+
+## Clean with grepl - every row in each column
+MyDF<-NULL
+MyDF2<-NULL
+for (i in 1:ncol(TweetDF)){
+  MyList=c() 
+  MyList2=c() # each list is a column of logicals ...
+  MyList=c(MyList,grepl("[[:digit:]]", TweetDF[[i]]))
+  MyDF<-cbind(MyDF,MyList)  ## create a logical DF
+  MyList2=c(MyList2,(nchar(TweetDF[[i]])<4 | nchar(TweetDF[[i]])>11))
+  MyDF2<-cbind(MyDF2,MyList2) 
+  ## TRUE is when a cell has a word that contains digits
+}
+## For all TRUE, replace with blank
+TweetDF[MyDF] <- ""
+TweetDF[MyDF2] <- ""
+(head(TweetDF,10))
+
+ 
+
+# Now we save the dataframe using the write table command 
+write.table(TweetDF, file = "UpdatedTweetFile.csv", col.names = FALSE, 
+            row.names = FALSE, sep = ",")
+TweetTrans <- read.transactions("UpdatedTweetFile.csv", sep =",", 
+                                format("basket"),  rm.duplicates = TRUE)
+#inspect(TweetTrans)
+
+### Clean up the datafile
+
+```
+```{r}
+Sample_trans <- sample(TweetTrans,50)
+summary(Sample_trans)
+```
+
+
+## ARM
+```{r}
+## Create the Rules  - Relationships 
+TweetTrans_rules = arules::apriori(TweetTrans,parameter = list(support=.005, conf=0.05, minlen=2))
+inspect(TweetTrans_rules)
+##  SOrt by Conf
+SortedRules_conf <- sort(TweetTrans_rules, by="confidence", decreasing=TRUE)
+inspect(SortedRules_conf[1:20])
+## Sort by Sup
+SortedRules_sup <- sort(TweetTrans_rules, by="support", decreasing=TRUE)
+inspect(SortedRules_sup[1:20])
+## Sort by Lift
+SortedRules_lift <- sort(TweetTrans_rules, by="lift", decreasing=TRUE)
+TweetTrans_rules<-SortedRules_lift[1:50]
+inspect(TweetTrans_rules)   
+```
+
+########  Using NetworkD3 To View Results   ###########
+#######################################################
+## Convert the RULES to a DATAFRAME
+
+
+```{r pressure, echo=FALSE}
+Rules_DF2<-DATAFRAME(TweetTrans_rules, separate = TRUE)
+(head(Rules_DF2))
+str(Rules_DF2)
+## Convert to char
+Rules_DF2$LHS<-as.character(Rules_DF2$LHS)
+Rules_DF2$RHS<-as.character(Rules_DF2$RHS)
+
+## Remove all {}
+Rules_DF2[] <- lapply(Rules_DF2, gsub, pattern='[{]', replacement='')
+Rules_DF2[] <- lapply(Rules_DF2, gsub, pattern='[}]', replacement='')
+
+Rules_DF2
+
+## Do for SUp, Conf, and Lift 
+## USING LIFT
+Rules_L<-Rules_DF2[c('LHS','RHS','lift')]
+names(Rules_L) <- c("SourceName", "TargetName", "Weight")
+head(Rules_L,30)
+
+## USING SUP
+Rules_Sup<-Rules_DF2[c('LHS','RHS','support')]
+names(Rules_Sup) <- c("SourceName", "TargetName", "Weight")
+head(Rules_Sup,30)
+
+## USING CONF
+Rules_C<-Rules_DF2[c(c('LHS','RHS','confidence'))]
+names(Rules_C) <- c("SourceName", "TargetName", "Weight")
+head(Rules_C,30)
+
+
+```
+```{r}
+## CHoose and set
+#Rules_Sup<-Rules_C
+Rules_Sup<-Rules_L
+#Rules_Sup<-Rules_S
+
+```
+
+```{r}
+###########################################################################
+#############       Build a NetworkD3 edgeList and nodeList    ############
+###########################################################################
+
+############################### BUILD THE NODES & EDGES ####################################
+(edgeList<-Rules_Sup)
+(MyGraph <- igraph::simplify(igraph::graph.data.frame(edgeList, directed=TRUE)))
+
+nodeList <- data.frame(ID = c(0:(igraph::vcount(MyGraph) - 1)), 
+                       # because networkD3 library requires IDs to start at 0
+                       nName = igraph::V(MyGraph)$name)
+
+## Node Degree
+(nodeList <- cbind(nodeList, nodeDegree=igraph::degree(MyGraph, 
+                                                       v = igraph::V(MyGraph), mode = "all")))
+
+## Betweenness
+BetweenNess <- igraph::betweenness(MyGraph, 
+                                   v = igraph::V(MyGraph), 
+                                   directed = TRUE) 
+
+(nodeList <- cbind(nodeList, nodeBetweenness=BetweenNess))
+
+## This can change the BetweenNess value if needed
+#BetweenNess<-BetweenNess/100
+
+## Node Degree
+
+## BUILD THE EDGES 
+getNodeID <- function(x){
+  which(x == igraph::V(MyGraph)$name) - 1  #IDs start at 0
+}
+## UPDATE THIS !! depending on # choice
+(getNodeID("salary")) 
+
+edgeList <- plyr::ddply(
+  Rules_Sup, .variables = c("SourceName", "TargetName" , "Weight"), 
+  function (x) data.frame(SourceID = getNodeID(x$SourceName), 
+                          TargetID = getNodeID(x$TargetName)))
+head(edgeList)
+nrow(edgeList)
+
+##  Dice Sim 
+#Calculate Dice similarities between all pairs of nodes
+#The Dice similarity coefficient of two vertices is twice 
+#the number of common neighbors divided by the sum of the degrees 
+#of the vertices. Method dice calculates the pairwise Dice similarities 
+#for some (or all) of the vertices. 
+DiceSim <- igraph::similarity.dice(MyGraph, vids = igraph::V(MyGraph), mode = "all")
+head(DiceSim)
+
+#Create  data frame that contains the Dice similarity between any two vertices
+F1 <- function(x) {data.frame(diceSim = DiceSim[x$SourceID +1, x$TargetID + 1])}
+#Place a new column in edgeList with the Dice Sim
+head(edgeList)
+edgeList <- plyr::ddply(edgeList,
+                        .variables=c("SourceName", "TargetName", "Weight", 
+                                     "SourceID", "TargetID"), 
+                        function(x) data.frame(F1(x)))
+head(edgeList)
+
+D3_network_Tweets <- networkD3::forceNetwork(
+  Links = edgeList, # data frame that contains info about edges
+  Nodes = nodeList, # data frame that contains info about nodes
+  Source = "SourceID", # ID of source node 
+  Target = "TargetID", # ID of target node
+  Value = "Weight", # value from the edge list (data frame) that will be used to value/weight relationship amongst nodes
+  NodeID = "nName", # value from the node list (data frame) that contains node description we want to use (e.g., node name)
+  Nodesize = "nodeBetweenness",  # value from the node list (data frame) that contains value we want to use for a node size
+  Group = "nodeDegree",  # value from the node list (data frame) that contains value we want to use for node color
+  height = 700, # Size of the plot (vertical)
+  width = 900,  # Size of the plot (horizontal)
+  fontSize = 20, # Font size
+  linkDistance = networkD3::JS("function(d) { return d.value*1000; }"), # Function to determine distance between any two nodes, uses variables already defined in forceNetwork function (not variables from a data frame)
+  linkWidth = networkD3::JS("function(d) { return d.value*5; }"),# Function to determine link/edge thickness, uses variables already defined in forceNetwork function (not variables from a data frame)
+  opacity = 5, # opacity
+  zoom = TRUE, # ability to zoom when click on the node
+  opacityNoHover = 5, # opacity of labels when static
+  linkColour = "red"   ###"edges_col"red"# edge colors
+) 
+
+# Plot network
+#D3_network_Tweets
+
+# Save network as html file
+networkD3::saveNetwork(D3_network_Tweets, 
+                       "NetD3_1.html", selfcontained = TRUE)
+```
+
+
+
+
+
+
+```{r}
+MyGraph <- plot(MyGraph, method="graph", engine = "htmlwidget")
+```
+```{r}
+(SortedRules_sup)
+graph_plot <- plot(SortedRules_sup,method="graph",engine='html', shading="confidence") 
+plot(SortedRules_conf,method="graph",engine='interactive',shading="confidence") 
+plot(SortedRules_lift,method="graph",engine='interactive',shading="confidence") 
+
+### save interacitive figures
+htmlwidgets::saveWidget(graph_plot, "arules.html", selfcontained = FALSE)
+browseURL("arules.html")
+```
+
+
+
+
+
+```{r}
+(My_igraph <- graph_from_data_frame(d = edgeList[c('SourceID','TargetID')], 
+                                     vertices = nodeList[c('ID','nName')], 
+                                    directed = TRUE))
+
+## The edge of the object:
+E(My_igraph)
+E_Weight<-edgeList$Weight
+E(My_igraph)$color <- "lightblue"
+
+tkid <- tkplot(My_igraph,vertex.label=nodeList$nName) 
+
+```
+
+
+
