@@ -257,9 +257,16 @@ htmlwidgets::saveWidget(graph_plot, "arulesViz.html", selfcontained = FALSE)
 browseURL("arulesViz.html")
 ```
 
-
-
-
+```{r}
+vis.san = sankeyNetwork(Links = edgeList, 
+                        Nodes = nodeList,
+                        Source = "SourceID", # ID of source node 
+                        Target = "TargetID", # ID of target node
+                        Value = "Weight",
+                        NodeID = "nName")
+htmlwidgets::saveWidget(vis.san, "Sankey.html", selfcontained = TRUE)
+browseURL("Sankey.html")
+```
 
 ```{r}
 (My_igraph <- graph_from_data_frame(d = edgeList[c('SourceID','TargetID')], 
