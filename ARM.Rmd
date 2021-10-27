@@ -253,10 +253,8 @@ MyGraph <- plot(MyGraph, method="graph", engine = "htmlwidget")
 graph_plot <- plot(SortedRules_sup,method="graph",engine='html', shading="confidence") 
 plot(SortedRules_conf,method="graph",engine='interactive',shading="confidence") 
 plot(SortedRules_lift,method="graph",engine='interactive',shading="confidence") 
-
-### save interacitive figures
-htmlwidgets::saveWidget(graph_plot, "arules.html", selfcontained = FALSE)
-browseURL("arules.html")
+htmlwidgets::saveWidget(graph_plot, "arulesViz.html", selfcontained = FALSE)
+browseURL("arulesViz.html")
 ```
 
 
@@ -268,7 +266,7 @@ browseURL("arules.html")
                                      vertices = nodeList[c('ID','nName')], 
                                     directed = TRUE))
 
-## The edge of the object:
+## edge of the object:
 E(My_igraph)
 E_Weight<-edgeList$Weight
 E(My_igraph)$color <- "lightblue"
