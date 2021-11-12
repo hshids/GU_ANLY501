@@ -1,0 +1,162 @@
+---
+title: "dt_r"
+author: "Hanjing Shi"
+date: "11/9/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+## LIBRARIES
+library(rpart)  
+library(rattle)  
+library(rpart.plot)
+library(RColorBrewer)
+library(Cairo)
+library(network)
+library(ggplot2)
+library(slam)
+library(quanteda)
+library(proxy)
+library(stringr)
+library(textmineR)
+library(caret)
+library(caTools)
+```
+
+
+
+```{r}
+MyPath="~/desktop/GGT/501data/module5"
+RecordDatasetName="impact.csv"
+setwd(MyPath)
+RecordDF_A<-read.csv(RecordDatasetName, stringsAsFactors=TRUE)
+#head(RecordDF_A)
+RecordDF_A <- na.omit(RecordDF_A)
+head(RecordDF_A)
+```
+
+
+```{r}
+split <- sample.split(RecordDF_A$GDP, SplitRatio = 0.7)
+train <- subset(RecordDF_A, split == TRUE)
+test <- subset(RecordDF_A, split == FALSE)
+table(train$GDP)
+table(test$GDP)
+```
+
+
+
+```{r pressure, echo=FALSE}
+RecordDF_A$Adj.Close<-as.factor(RecordDF_A$GDP)
+apply(RecordDF_A, 2, table)
+
+(DataSize=nrow(RecordDF_A))
+(TrainingSet_Size<-floor(DataSize*(3/4))) 
+(TestSet_Size <- DataSize - TrainingSet_Size)
+(MyTrainSample <- sample(nrow(RecordDF_A),
+                         TrainingSet_Size,replace=FALSE))
+MyTrainingSET <- RecordDF_A[MyTrainSample,]
+MyTestSET <- RecordDF_A[-MyTrainSample,]
+
+TestKnownLabels <- MyTestSET$consump.Shorter..containment
+MyTestSET <- MyTestSET[ , -which(names(MyTestSET) %in% c("Comsumption Stock"))]
+```
+
+
+```{r}
+### DT1
+DT <- rpart(MyTrainingSET$GDP ~ ., data = MyTrainingSET, method="class", minsplit=2, minbucket=1)
+summary(DT)
+#rpart.plot(DT,box.palette = "blue")
+fancyRpartPlot(DT)
+```
+```{r}
+DT_Prediction= predict(DT, MyTrainingSET, type="class")
+caret::confusionMatrix(DT_Prediction, TestKnownLabels)
+```
+
+```{r}
+### DT2
+DT2 <- rpart(MyTrainingSET$GDP ~ ., data = MyTrainingSET, method="class", minsplit=2, minbucket=4)
+summary(DT2)
+#rpart.plot(DT,box.palette = "blue")
+fancyRpartPlot(DT2, cex = 0.7)
+```
+
+```{r}
+#DT3
+DT3<-rpart(MyTrainingSET$GDP ~ ., 
+           data = MyTrainingSET, method="class",
+           parms = list(split="information"),minsplit=2, minbucket=4)
+rattle::fancyRpartPlot(DT3, cex=.7)
+```
+```{r}
+table(MyTrainingSET$num.of.COVID.19)
+
+set.seed(120)
+split <- sample.split(MyTrainingSET$num.of.COVID.19, SplitRatio = 0.7)
+train <- subset(MyTrainingSET, split == TRUE)
+test <- subset(MyTrainingSET, split == FALSE)
+
+# Check whether the data is balanced
+table(train$num.of.COVID.19)
+table(test$num.of.COVID.19)
+
+# REMOVE THE LABELS from the test set and keep them
+TestKnownLabels <- test$num.of.COVID.19
+test <- test[ , -which(names(test) %in% c("num.of.COVID.19"))]
+row.names(test) <- NULL
+```
+```{r}
+DT <- rpart(GDP~ ., data = train, method="class", minsplit=2, minbucket=2)
+summary(DT)
+rattle::fancyRpartPlot(DT)
+
+```
+```{r}
+printcp(DT) 
+```
+```{r}
+
+DT_Prediction= predict(DT, test, type="class")
+caret::confusionMatrix(DT_Prediction, TestKnownLabels)
+
+```
+```{r}
+DT2<-rpart(num.of.COVID.19~ ., 
+           data = train, method="class",minsplit=2)
+rattle::fancyRpartPlot(DT2, cex=.7)
+
+
+```
+```{r}
+DT3<-rpart(num.of.COVID.19~ ., 
+           data = train, method="class",
+           parms = list(split="information"),minsplit=2,minbucket=2)
+rattle::fancyRpartPlot(DT3, cex=.7)
+
+```
+
+```{r}
+DT_Prediction2= predict(DT2, test, type="class")
+caret::confusionMatrix(DT_Prediction2, TestKnownLabels)
+
+DT_Prediction3= predict(DT3, test, type="class")
+caret::confusionMatrix(DT_Prediction3, TestKnownLabels)
+
+```
+```{r}
+feature <- data.frame(importance = DT$variable.importance)  
+feature <- rownames_to_column(feature,var='feature')
+feature <- feature[order(feature$importance),]
+png(file="feature_importance_R.png",width=800, height=700)
+barplot(feature$importance,
+        main = "Feature importance",
+        xlab = "importancce",
+        ylab = "feature",
+        names.arg = feature$feature,
+        col = "blue",
+        horiz = TRUE)
+dev.off()
+```
+
